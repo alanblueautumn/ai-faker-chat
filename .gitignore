@@ -16,3 +16,4 @@ wheels/
 # Private chat data and generated artifacts
 *_chat.txt
 .env
+.DS_Store
