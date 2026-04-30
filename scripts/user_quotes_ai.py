@@ -14,7 +14,7 @@ from generate_profile import DEFAULT_DEEPSEEK_BASE_URL
 
 DEFAULT_MESSAGES = Path("data/messages.jsonl")
 DEFAULT_PROVIDER = "deepseek"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-v4-pro"
 STRONG_WORDS = (
     "草",
     "卧槽",

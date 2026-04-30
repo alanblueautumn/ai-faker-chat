@@ -14,7 +14,7 @@ from generate_profile import DEFAULT_DEEPSEEK_BASE_URL
 DEFAULT_MESSAGES = Path("data/messages.jsonl")
 DEFAULT_OUT = Path("data/profiles/group.md")
 DEFAULT_PROVIDER = "deepseek"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-v4-pro"
 
 
 def build_client(provider: str) -> OpenAI:

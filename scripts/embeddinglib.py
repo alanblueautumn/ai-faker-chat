@@ -4,9 +4,18 @@ from functools import lru_cache
 
 import faiss
 import numpy as np
+import torch
 
 
-DEFAULT_LOCAL_EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
+DEFAULT_LOCAL_EMBEDDING_MODEL = "BAAI/bge-large-zh-v1.5"
+
+
+def preferred_device() -> str:
+    if torch.backends.mps.is_available():
+        return "mps"
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
 
 
 @lru_cache(maxsize=2)
@@ -19,7 +28,9 @@ def load_local_model(model_name: str):
             "`uv add sentence-transformers`."
         ) from exc
 
-    return SentenceTransformer(model_name)
+    device = preferred_device()
+    print(f"Loading embedding model on device: {device}")
+    return SentenceTransformer(model_name, device=device)
 
 
 def embed_local(texts: list[str], model_name: str) -> np.ndarray:

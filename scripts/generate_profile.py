@@ -7,24 +7,43 @@ from pathlib import Path
 from openai import OpenAI
 
 from chatlib import load_dotenv, profile_filename, read_jsonl
+from cleaning import filter_message_rows
 
 
 DEFAULT_MESSAGES = Path("data/messages.jsonl")
 DEFAULT_OUT_DIR = Path("data/profiles")
 DEFAULT_PROVIDER = "deepseek"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-v4-pro"
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 
-def collect_user_messages(messages_path: Path, user: str, limit: int) -> list[str]:
-    messages = [
-        str(message["content"])
-        for message in read_jsonl(messages_path)
-        if str(message["user"]) == user
-    ]
+def collect_user_messages(
+    messages_path: Path,
+    user: str,
+    limit: int,
+    clean: bool,
+    min_chars: int,
+    global_repeat_threshold: int,
+    per_user_repeat_limit: int,
+) -> list[str]:
+    rows = [message for message in read_jsonl(messages_path) if str(message["user"]) == user]
+    if clean:
+        # 用户画像样本要尽量信息密集；复读、空洞短句和图片占位会浪费
+        # 模型上下文，也会让生成出来的风格档案变得很泛。
+        rows, stats = filter_message_rows(
+            rows,
+            min_chars,
+            global_repeat_threshold,
+            per_user_repeat_limit,
+        )
+        print(f"Cleaning stats for {user}: {stats}")
+
+    messages = [str(message["content"]) for message in rows]
     if len(messages) <= limit:
         return messages
 
+    # 按用户完整发言历史均匀抽样，而不是只取最早的消息；
+    # 这样昵称阶段、话题阶段变化不容易单独主导画像。
     step = len(messages) / limit
     return [messages[int(index * step)] for index in range(limit)]
 
@@ -63,8 +82,20 @@ def generate_profile(
     provider: str,
     model: str,
     limit: int,
+    clean: bool,
+    min_chars: int,
+    global_repeat_threshold: int,
+    per_user_repeat_limit: int,
 ) -> Path:
-    samples = collect_user_messages(messages_path, user, limit)
+    samples = collect_user_messages(
+        messages_path,
+        user,
+        limit,
+        clean,
+        min_chars,
+        global_repeat_threshold,
+        per_user_repeat_limit,
+    )
     if not samples:
         raise ValueError(f"No messages found for user: {user}")
 
@@ -113,6 +144,29 @@ def build_parser() -> argparse.ArgumentParser:
         default=200,
         help="Maximum message samples to send to the model. Default: 200.",
     )
+    parser.add_argument(
+        "--no-clean",
+        action="store_true",
+        help="Disable repeated/low-information content filtering before sampling.",
+    )
+    parser.add_argument(
+        "--min-chars",
+        type=int,
+        default=4,
+        help="Drop messages shorter than this when cleaning. Default: 4.",
+    )
+    parser.add_argument(
+        "--global-repeat-threshold",
+        type=int,
+        default=20,
+        help="Drop exact messages repeated at least this many times. Default: 20.",
+    )
+    parser.add_argument(
+        "--per-user-repeat-limit",
+        type=int,
+        default=3,
+        help="Keep at most this many exact repeats. Default: 3.",
+    )
     return parser
 
 
@@ -130,6 +184,10 @@ def main() -> None:
         args.provider,
         args.model,
         args.limit,
+        not args.no_clean,
+        args.min_chars,
+        args.global_repeat_threshold,
+        args.per_user_repeat_limit,
     )
     print(f"Wrote profile to {path}")
 
