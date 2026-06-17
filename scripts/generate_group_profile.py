@@ -78,7 +78,10 @@ def collect_group_data(
             if len(window) < 3:
                 continue
             window_samples.append(
-                "\n".join(f"{row['user']}:{row['content']}" for row in window)
+                "\n".join(
+                    f"{row.get('time', '')} {row['user']}:{row['content']}".strip()
+                    for row in window
+                )
             )
             if len(window_samples) >= max_windows:
                 break

@@ -18,3 +18,4 @@ data/
 *_chat.txt
 .env
 .DS_Store
+original-data.md

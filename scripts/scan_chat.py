@@ -4,24 +4,10 @@ import argparse
 from collections import Counter
 from pathlib import Path
 
+from chatlib import parse_chat_line
 
 DEFAULT_TOP_USERS = 30
 DEFAULT_SAMPLE_LIMIT = 20
-
-
-def parse_line(line: str) -> tuple[str, str] | None:
-    line = line.strip()
-    if not line or ":" not in line:
-        return None
-
-    user, content = line.split(":", 1)
-    user = user.strip()
-    content = content.strip()
-
-    if not user or not content:
-        return None
-
-    return user, content
 
 
 def scan_chat_file(path: Path, sample_limit: int) -> dict[str, object]:
@@ -42,13 +28,14 @@ def scan_chat_file(path: Path, sample_limit: int) -> dict[str, object]:
                 empty_lines += 1
                 continue
 
-            parsed = parse_line(line)
+            parsed = parse_chat_line(line)
             if parsed is None:
                 if len(malformed_samples) < sample_limit:
                     malformed_samples.append((line_number, line[:200]))
                 continue
 
-            user, content = parsed
+            user = parsed["user"]
+            content = parsed["content"]
             parsed_lines += 1
             user_counts[user] += 1
             user_chars[user] += len(content)
@@ -101,9 +88,9 @@ def print_report(result: dict[str, object], top_users: int) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Scan a plain-text group chat file formatted as 'user:message'."
+        description="Scan a Markdown chat file formatted as '**HH:MM:SS user**: message'."
     )
-    parser.add_argument("chat_file", type=Path, help="Path to the chat txt file.")
+    parser.add_argument("chat_file", type=Path, help="Path to the chat md file.")
     parser.add_argument(
         "--top-users",
         type=int,

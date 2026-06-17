@@ -6,6 +6,7 @@ from typing import Iterable
 
 
 MEDIA_MARKERS = ("[图片]", "[视频]", "[语音]", "[文件]", "[动画表情]", "[表情]")
+MARKDOWN_MEDIA_RE = re.compile(r"^!\[(图片|视频|语音|文件|动画表情|表情)[^\]]*\]\([^)]+\)$")
 EMOJI_RE = re.compile(
     "["
     "\U0001f300-\U0001f5ff"
@@ -31,6 +32,8 @@ def is_low_information(content: str, min_chars: int) -> bool:
     if len(text) < min_chars:
         return True
     if any(marker in text for marker in MEDIA_MARKERS):
+        return True
+    if MARKDOWN_MEDIA_RE.match(text):
         return True
 
     without_emoji = EMOJI_RE.sub("", text)

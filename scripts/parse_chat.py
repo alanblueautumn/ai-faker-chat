@@ -17,19 +17,19 @@ def iter_messages(chat_file: Path):
             if parsed is None:
                 continue
 
-            user, content = parsed
             message_id += 1
             yield {
                 "id": message_id,
                 "line_no": line_no,
-                "user": user,
-                "content": content,
+                "time": parsed["time"],
+                "user": parsed["user"],
+                "content": parsed["content"],
             }
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Parse a plain-text chat file into JSONL messages."
+        description="Parse a Markdown chat file into JSONL messages."
     )
     parser.add_argument("chat_file", type=Path, help="Path to the source txt file.")
     parser.add_argument(

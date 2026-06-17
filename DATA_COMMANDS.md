@@ -4,13 +4,13 @@
 
 ## 1. 原始文件
 
-默认原始聊天记录文件：
+默认原始聊天记录文件是 `.md`：
 
 ```bash
 杭州牛马二群_chat.txt
 ```
 
-如果你的原始文件名不同，把下面命令里的文件名替换成自己的 txt 路径。
+如果你的原始文件名不同，把下面命令里的文件名替换成自己的 `.md` 聊天记录路径。
 
 ## 2. 扫描聊天记录
 
@@ -26,7 +26,7 @@ uv run python scripts/scan_chat.py 杭州牛马二群_chat.txt --top-users 50
 
 ## 3. 生成基础数据
 
-把原始 txt 转成结构化消息：
+把原始聊天记录转成结构化消息：
 
 ```bash
 uv run python scripts/parse_chat.py 杭州牛马二群_chat.txt --out data/messages.jsonl
@@ -51,6 +51,14 @@ data/messages.jsonl
 data/reports/user_stats.json
 data/windows.jsonl
 ```
+
+`messages.jsonl` 会保留 Markdown 原始发言时间：
+
+```json
+{"id":1,"line_no":1,"time":"16:33:28","user":"安达桜","content":"跟新出的15号电极柱比呢"}
+```
+
+`windows.jsonl` 的上下文文本也会带上时间，方便向量检索和 AI prompt 保留对话节奏。
 
 ## 4. 生成用户相似度报告
 
@@ -146,7 +154,37 @@ uv run python scripts/generate_group_profile.py
 data/profiles/group.md
 ```
 
-## 9. 单次模拟回复
+## 9. 生成高精度用户画像
+
+默认使用 `deepseek-v4-pro`，会综合清洗后代表发言、统计特征和上下文窗口，输出简洁版画像。
+
+```bash
+uv run python scripts/generate_deep_profile.py --user "👴🍼👶"
+```
+
+更高精度：
+
+```bash
+uv run python scripts/generate_deep_profile.py --user "👴🍼👶" --sample-limit 800 --window-limit 120
+```
+
+输出结构：
+
+```text
+简要概括
+说话习惯
+典型表达
+不要这样生成
+模仿指令
+```
+
+生成结果在：
+
+```text
+data/profiles/*.deep.md
+```
+
+## 10. 单次模拟回复
 
 默认使用 `deepseek-v4-flash`。
 
@@ -168,7 +206,7 @@ uv run python scripts/chat_as.py --user "👴🍼👶" --group-profile data/prof
 uv run python scripts/chat_as.py --user "👴🍼👶" --debug --context "我:这个手机能不能买"
 ```
 
-## 10. 交互式聊天
+## 11. 交互式聊天
 
 默认使用 `deepseek-v4-flash`。
 
@@ -191,7 +229,7 @@ uv run python scripts/talk_as.py --user "👴🍼👶" --group-profile data/prof
 /reset  清空当前上下文
 ```
 
-## 11. AI 版经典语录
+## 12. AI 版经典语录
 
 默认使用 `deepseek-v4-pro`。
 
@@ -207,7 +245,78 @@ uv run python scripts/user_quotes_ai.py --user "👴🍼👶" --max-candidates 6
 
 默认输出最经典 5 句，并展示出自聊天行号。
 
-## 12. Git 注意事项
+## 13. 群友关系图谱
+
+先从基础 JSON 数据构建关系图谱：
+
+```bash
+uv run python scripts/build_group_graph.py data/messages.jsonl --out data/reports/group_graph.json
+```
+
+再渲染成 HTML：
+
+```bash
+uv run python scripts/render_group_graph.py --graph data/reports/group_graph.json --out data/reports/group_graph.html
+```
+
+生成 AI 解释层：
+
+```bash
+uv run python scripts/enrich_group_graph_ai.py --graph data/reports/group_graph.json --messages data/messages.jsonl --out data/reports/group_graph_ai.json
+```
+
+带 AI 解释渲染 HTML：
+
+```bash
+uv run python scripts/render_group_graph.py --graph data/reports/group_graph.json --ai data/reports/group_graph_ai.json --out data/reports/group_graph.html
+```
+
+如果图太密，可以提高最小连接强度：
+
+```bash
+uv run python scripts/build_group_graph.py data/messages.jsonl --out data/reports/group_graph.json --min-weight 50
+```
+
+HTML 默认展示权重最高的 300 条边，可以调整：
+
+```bash
+uv run python scripts/render_group_graph.py --graph data/reports/group_graph.json --out data/reports/group_graph.html --max-edges 500
+```
+
+图谱说明：
+
+```text
+LIKELY_REPLY / INTERACTS_WITH 都是基于消息顺序推断，不代表明确回复。
+边权重综合了近邻接话、窗口共现和语气规则统计。
+```
+
+## 14. 群聊常见话题
+
+先从上下文窗口聚类出基础话题：
+
+```bash
+uv run python scripts/build_group_topics.py --windows data/windows.jsonl --out data/reports/group_topics_base.json
+```
+
+生成 AI 话题解释：
+
+```bash
+uv run python scripts/enrich_group_topics_ai.py --topics data/reports/group_topics_base.json --out data/reports/group_topics_ai.json
+```
+
+渲染 HTML：
+
+```bash
+uv run python scripts/render_group_topics.py --topics data/reports/group_topics_base.json --ai data/reports/group_topics_ai.json --out data/reports/group_topics.html
+```
+
+调整话题数量：
+
+```bash
+uv run python scripts/build_group_topics.py --windows data/windows.jsonl --out data/reports/group_topics_base.json --topic-count 16
+```
+
+## 15. Git 注意事项
 
 不要提交这些文件：
 

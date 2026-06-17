@@ -17,12 +17,16 @@ def build_windows(messages_path: Path, before: int, after: int):
         after_messages = messages[index + 1 : index + 1 + after]
 
         before_text = [
-            format_message(str(item["user"]), str(item["content"]))
+            format_message(str(item["user"]), str(item["content"]), str(item.get("time", "")))
             for item in before_messages
         ]
-        target_line = format_message(str(message["user"]), str(message["content"]))
+        target_line = format_message(
+            str(message["user"]),
+            str(message["content"]),
+            str(message.get("time", "")),
+        )
         after_text = [
-            format_message(str(item["user"]), str(item["content"]))
+            format_message(str(item["user"]), str(item["content"]), str(item.get("time", "")))
             for item in after_messages
         ]
         full_text = "\n".join([*before_text, target_line, *after_text])
@@ -31,6 +35,7 @@ def build_windows(messages_path: Path, before: int, after: int):
             "id": int(message["id"]),
             "target_message_id": int(message["id"]),
             "line_no": int(message["line_no"]),
+            "time": message.get("time"),
             "user": message["user"],
             "before": before_text,
             "target": message["content"],

@@ -8,19 +8,30 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-def parse_chat_line(line: str) -> tuple[str, str] | None:
+MARKDOWN_CHAT_RE = re.compile(r"^\*\*(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<user>.+?)\*\*:\s*(?P<content>.*)$")
+
+
+def unescape_markdown_text(text: str) -> str:
+    return re.sub(r"\\([\\`*_{}\[\]()#+\-.!|>])", r"\1", text)
+
+
+def parse_chat_line(line: str) -> dict[str, str] | None:
     line = line.strip()
-    if not line or ":" not in line:
+    if not line:
         return None
 
-    user, content = line.split(":", 1)
-    user = user.strip()
-    content = content.strip()
+    markdown_match = MARKDOWN_CHAT_RE.match(line)
+    if not markdown_match:
+        return None
+
+    time = markdown_match.group("time").strip()
+    user = unescape_markdown_text(markdown_match.group("user").strip())
+    content = markdown_match.group("content").strip()
 
     if not user or not content:
         return None
 
-    return user, content
+    return {"time": time, "user": user, "content": content}
 
 
 def ensure_parent(path: Path) -> None:
@@ -74,7 +85,9 @@ def load_dotenv(path: Path = Path(".env")) -> None:
             os.environ[key] = value
 
 
-def format_message(user: str, content: str) -> str:
+def format_message(user: str, content: str, time: str | None = None) -> str:
+    if time:
+        return f"{time} {user}:{content}"
     return f"{user}:{content}"
 
 

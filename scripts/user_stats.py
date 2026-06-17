@@ -40,10 +40,12 @@ def build_stats(messages_path: Path, sample_limit: int) -> dict[str, object]:
     stats: dict[str, dict[str, object]] = {}
     punctuation: dict[str, Counter[str]] = defaultdict(Counter)
     emojis: dict[str, Counter[str]] = defaultdict(Counter)
+    active_hours: dict[str, Counter[str]] = defaultdict(Counter)
 
     for message in read_jsonl(messages_path):
         user = str(message["user"])
         content = str(message["content"])
+        message_time = str(message.get("time", ""))
         content_len = len(content)
 
         if user not in stats:
@@ -76,6 +78,8 @@ def build_stats(messages_path: Path, sample_limit: int) -> dict[str, object]:
             punctuation[user][match] += 1
         for match in EMOJI_RE.findall(content):
             emojis[user][match] += 1
+        if len(message_time) >= 2:
+            active_hours[user][message_time[:2]] += 1
 
     for user, user_stats in stats.items():
         messages = int(user_stats["messages"])
@@ -87,6 +91,9 @@ def build_stats(messages_path: Path, sample_limit: int) -> dict[str, object]:
         user_stats["grade"] = imitation_grade(messages)
         user_stats["top_punctuation"] = punctuation[user].most_common(20)
         user_stats["top_emoji"] = emojis[user].most_common(20)
+        user_stats["active_hours"] = {
+            hour: active_hours[user].get(f"{hour:02d}", 0) for hour in range(24)
+        }
 
     ranked_users = sorted(
         stats,

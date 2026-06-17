@@ -61,7 +61,8 @@ def format_context(rows: list[dict[str, object]], index: int, before: int, after
     start = max(0, index - before)
     end = min(len(rows), index + after + 1)
     return "\n".join(
-        f"{row['user']}:{row['content']}" for row in rows[start:end]
+        f"{row.get('time', '')} {row['user']}:{row['content']}".strip()
+        for row in rows[start:end]
     )
 
 
